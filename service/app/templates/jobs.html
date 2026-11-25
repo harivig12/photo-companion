@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}Jobs · Photos companion{% endblock %}
+{% block content %}
+<h1 class="sr-only">Jobs</h1>
+{% if note %}<div class="banner ok" role="status"><span><strong>✓</strong> {{ note }}</span></div>{% endif %}
+<p class="lede">
+  {% if counts.running %}Worker busy: {{ counts.running }} running, {{ counts.queued }} queued{% if counts.failed %}, {{ counts.failed }} failed{% endif %}.
+  {% elif counts.queued %}{{ counts.queued }} job{{ 's' if counts.queued != 1 }} waiting to start.
+  {% else %}Nothing running. Start one from <a href="/create">Create</a> or approve an idea in <a href="/suggestions">Suggestions</a>.{% endif %}
+</p>
+
+<div class="grid4">
+  <div class="panel kpi"><div class="v">{{ counts.queued }}</div><div class="l">Queued</div></div>
+  <div class="panel kpi"><div class="v">{{ counts.running }}</div><div class="l">Running</div></div>
+  <div class="panel kpi"><div class="v">{{ counts.done_today }}</div><div class="l">Done today</div></div>
+  <div class="panel kpi {% if counts.failed %}hot{% endif %}"><div class="v">{{ counts.failed }}</div><div class="l">Failed</div></div>
+</div>
+
+<div class="grid2">
+  <section class="panel" aria-labelledby="bykind-h">
+    <h2 id="bykind-h">By type, today</h2>
+    {% for kind, c in by_kind.items() %}
+    <div class="prow">
+      <span>{{ kind_labels[kind] }}</span>
+      <span class="dots" aria-hidden="true">{% for i in range(c.planned if c.planned < 12 else 12) %}<i class="{{ 'on' if i < c.done }}"></i>{% endfor %}</span>
+      <span class="num faint">{{ c.done }} / {{ c.planned }}</span>
+    </div>
+    {% endfor %}
+    <p class="faint">Done out of planned today (planned = done today + queued + running).</p>
+  </section>
+
+  <section class="panel" aria-labelledby="live-h" id="live" data-job-id="{{ live.id if live else '' }}" data-queued="{{ counts.queued }}">
+    {% if live %}
+    <div class="row between">
+      <h2 id="live-h">Live: {{ live.kind_label }} · {{ live.title }}</h2>
+      <span class="st st-running" id="live-stage">{{ live.stage or 'Starting' }} · {{ live.progress }}%</span>
+    </div>
+    <progress id="live-progress" max="100" value="{{ live.progress }}" aria-label="Progress of {{ live.title }}">{{ live.progress }}%</progress>
+    <pre class="log" id="live-log" aria-live="off">{{ live.log[-8:] | join('\n') }}</pre>
+    <div class="row">
+      <form class="inline" method="post" action="/jobs/{{ live.id }}/cancel"><button class="btn ghost sm danger" type="submit">Cancel</button></form>
+    </div>
+    {% else %}
+    <h2 id="live-h">Live</h2>
+    <p class="muted">No job is running. The worker checks the queue every few seconds.</p>
+    {% endif %}
+  </section>
+</div>
+
+<nav class="chips" aria-label="Filter by type">
+  <a class="chip" href="/jobs" {% if not kind %}aria-current="true"{% endif %}>All</a>
+  {% for k, label in kind_labels.items() %}<a class="chip" href="/jobs?kind={{ k }}" {% if kind == k %}aria-current="true"{% endif %}>{{ label }}</a>{% endfor %}
+</nav>
+
+<section class="panel table-wrap" aria-label="Queue and history">
+  {% if jobs %}
+  <table>
+    <thead><tr><th scope="col">Status</th><th scope="col">Type</th><th scope="col">Job</th><th scope="col">From</th><th scope="col">Time</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+    <tbody>
+    {% for j in jobs %}
+      <tr>
+        <td><span class="st st-{{ j.status }}">{{ j.status | capitalize }}</span></td>
+        <td>{{ j.kind_label }}</td>
+        <td>{{ j.title }}</td>
+        <td>{{ j.origin | capitalize }}</td>
+        <td class="num faint">{{ (j.finished_at or j.started_at or j.created_at)[11:16] }}</td>
+        <td>
+          <div class="row">
+          {% if j.status == 'queued' %}
+            <form class="inline" method="post" action="/jobs/{{ j.id }}/up"><button class="btn ghost sm" type="submit" aria-label="Move {{ j.title }} up">Up</button></form>
+            <form class="inline" method="post" action="/jobs/{{ j.id }}/cancel"><button class="btn ghost sm danger" type="submit" aria-label="Remove {{ j.title }}">Remove</button></form>
+          {% elif j.status == 'done' %}
+            {% if j.editable %}<a class="btn ghost sm" href="/jobs/{{ j.id }}/edit" aria-label="Edit the text of {{ j.title }}">Edit text</a>{% endif %}
+            <details class="inline-menu">
+              <summary class="btn ghost sm">Save as preset</summary>
+              <form method="post" action="/jobs/{{ j.id }}/preset" class="row">
+                <label class="sr-only" for="preset-{{ j.id }}">Preset name</label>
+                <input id="preset-{{ j.id }}" name="name" type="text" maxlength="60" value="{{ j.title[:60] }}" required>
+                <button class="btn sm" type="submit">Save</button>
+              </form>
+            </details>
+          {% elif j.status == 'skipped' %}
+            <form class="inline" method="post" action="/jobs/{{ j.id }}/retry"><button class="btn ghost sm" type="submit">Run anyway</button></form>
+          {% elif j.status in ('failed', 'cancelled') %}
+            <form class="inline" method="post" action="/jobs/{{ j.id }}/retry"><button class="btn ghost sm" type="submit">Retry</button></form>
+          {% endif %}
+          </div>
+        </td>
+      </tr>
+      {% if j.message and j.status != 'queued' %}<tr><td colspan="6" class="why">{{ j.message }}</td></tr>{% endif %}
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="empty">No jobs yet{% if kind %} of this type{% endif %}. Start one from <a href="/create">Create</a>.</p>
+  {% endif %}
+</section>
+<p class="faint">{% if retention_days %}Finished jobs and their logs are removed after {{ retention_days }} days (Settings → Housekeeping). Creations already in Immich stay. Save a look as a preset to reuse it later.{% else %}Finished jobs are kept forever (Settings → Housekeeping).{% endif %}</p>
+{% endblock %}

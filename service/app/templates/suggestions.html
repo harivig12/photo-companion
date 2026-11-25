@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Suggestions · Photos companion{% endblock %}
+{% block content %}
+<div class="row between">
+  <div>
+    <h1>{% if ideas %}{{ ideas|length }} idea{{ 's' if ideas|length != 1 }} waiting{% else %}Suggestions{% endif %}</h1>
+    <p class="faint">Mode: {{ {'suggest': 'Suggest, I approve', 'auto': 'Create and upload automatically', 'off': 'Off'}[settings.suggestions.mode] }}
+      · daily scan at {{ settings.suggestions.scan_at }}
+      · last scan {{ last_scan.strftime('%d %b %H:%M') if last_scan else 'never' }}</p>
+  </div>
+  <div class="row">
+    <form method="post" action="/suggestions/scan"><button class="btn ghost sm" type="submit">Scan now</button></form>
+    {% if ideas %}<form method="post" action="/suggestions/approve-all"><button class="btn sm" type="submit">Approve all</button></form>{% endif %}
+  </div>
+</div>
+{% if scanned %}<div class="banner ok" role="status"><span><strong>✓</strong> {{ scanned }}</span></div>{% endif %}
+
+{% if ideas %}
+<div class="grid2">
+  {% for s in ideas %}
+  <section class="panel" aria-labelledby="idea-{{ s.id }}">
+    <div class="row between"><h2 id="idea-{{ s.id }}">{{ s.title }}</h2><span class="st st-running">{{ kind_labels[s.kind] }}</span></div>
+    <div class="thumbs-row">
+      {% for a in s.preview_ids %}<img src="/thumb/{{ a }}" alt="" loading="lazy" width="96" height="96">{% endfor %}
+    </div>
+    <p class="muted">Why: {{ s.reason }}</p>
+    <div class="row">
+      <form method="post" action="/suggestions/{{ s.id }}/approve"><button class="btn sm" type="submit">Approve</button></form>
+      <form method="post" action="/suggestions/{{ s.id }}/dismiss"><button class="btn ghost sm" type="submit">Dismiss</button></form>
+    </div>
+  </section>
+  {% endfor %}
+</div>
+{% else %}
+<div class="panel">
+  <h2>No ideas yet</h2>
+  <p class="muted">The daily scan looks at photos taken since the last scan (the first time: the last 30 days), groups them into events and suggests collages, cinematic photos and highlight videos. Each suggestion says why it was picked. Use <strong>Scan now</strong> to run it straight away.</p>
+</div>
+{% endif %}
+{% endblock %}

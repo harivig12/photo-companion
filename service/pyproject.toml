@@ -1,0 +1,11 @@
+[project]
+name = "photos-companion"
+version = "0.1.0"
+description = "Collages, cinematic photos and highlight videos for Immich, as a separate service"
+requires-python = ">=3.11"
+license = "MIT"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+filterwarnings = ["error::pytest.PytestUnraisableExceptionWarning"]

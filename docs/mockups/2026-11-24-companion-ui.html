@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mockup – Photos companion UI (2026-11-24)</title>
+<script>
+  // Theme: follow the device unless a choice is stored (design-library rule). Runs before first paint.
+  try { var t = localStorage.getItem('photos-theme'); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+</script>
+<style>
+  /* Tokens copied from design-library/tokens/tokens.css (obsidian dark / champagne light).
+     System fonts only: the real UI runs on a LAN and must not call Google Fonts. */
+  :root{
+    --coral:#EF4444; --amber:#D97706; --honey:#F59E0B; --emerald:#16A34A; --mint:#34D399; --cyan:#38BDF8; --sky:#7DD3FC;
+    --sans:Inter,"Segoe UI Variable Display","Segoe UI",ui-sans-serif,system-ui,-apple-system,Roboto,sans-serif;
+    --mono:ui-monospace,"Cascadia Code","SF Mono",Consolas,"Roboto Mono",monospace;
+    --r-sm:8px; --r-md:14px; --r-lg:20px;
+    --ease:cubic-bezier(.16,1,.3,1); --dur-fast:.15s; --dur:.45s;
+  }
+  :root,[data-theme=dark]{
+    --bg:#07080C; --surface:#12151D; --surface-2:#181C27; --line:#ffffff14; --rim:#ffffff1f;
+    --ink:#E8ECF4; --muted:#A9B3C6; --faint:#7C879B; --accent:var(--cyan); --accent-ink:var(--sky);
+    --btn:#fff; --btn-ink:#0B0E14; --btn-shadow:var(--honey);
+    --ok:#4ADE80; --ok-bg:#16A34A26; --bad:#FCA5A5; --bad-bg:#EF444426; --warn:#FCD34D; --warn-bg:#F59E0B26; --info:#7DD3FC; --info-bg:#38BDF826;
+    --thumb-a:#1E3A5F; --thumb-b:#3B2F1A; --thumb-c:#14352A;
+    color-scheme:dark;
+  }
+  [data-theme=light]{
+    --bg:#F5EFE1; --surface:#FFFDF9; --surface-2:#F9F4EA; --line:#D977061f; --rim:#D9770633;
+    --ink:#1C1917; --muted:#57534E; --faint:#78716C; --accent:#B45309; --accent-ink:#B45309;
+    --btn:#1C1917; --btn-ink:#FFFDF9; --btn-shadow:var(--honey);
+    --ok:#15803D; --ok-bg:#DCFCE7; --bad:#B91C1C; --bad-bg:#FEE2E2; --warn:#854D0E; --warn-bg:#FEF3C7; --info:#0C4A6E; --info-bg:#E0F2FE;
+    --thumb-a:#BFDBFE; --thumb-b:#FDE68A; --thumb-c:#BBF7D0;
+    color-scheme:light;
+  }
+  @media (prefers-color-scheme:light){
+    :root:not([data-theme]){
+      --bg:#F5EFE1; --surface:#FFFDF9; --surface-2:#F9F4EA; --line:#D977061f; --rim:#D9770633;
+      --ink:#1C1917; --muted:#57534E; --faint:#78716C; --accent:#B45309; --accent-ink:#B45309;
+      --btn:#1C1917; --btn-ink:#FFFDF9;
+      --ok:#15803D; --ok-bg:#DCFCE7; --bad:#B91C1C; --bad-bg:#FEE2E2; --warn:#854D0E; --warn-bg:#FEF3C7; --info:#0C4A6E; --info-bg:#E0F2FE;
+      --thumb-a:#BFDBFE; --thumb-b:#FDE68A; --thumb-c:#BBF7D0;
+      color-scheme:light;
+    }
+  }
+
+  *{box-sizing:border-box}
+  body{margin:0;font:16px/1.5 var(--sans);background:var(--bg);color:var(--ink)}
+  code{font-family:var(--mono);font-size:.9em}
+  .page{max-width:1280px;margin:0 auto;padding:32px 16px 64px}
+  .kicker{font:600 12px var(--mono);letter-spacing:.2em;text-transform:uppercase;color:var(--accent-ink);margin:0 0 8px}
+  .intro{background:var(--surface);box-shadow:0 0 0 1px var(--line) inset;border-radius:var(--r-lg);padding:20px 24px;margin-bottom:40px}
+  .intro h1{margin:0 0 8px;font-size:24px;letter-spacing:-.02em}
+  .intro p,.intro li{color:var(--muted);margin:0 0 6px}
+  .section-h{font-size:20px;margin:48px 0 6px;letter-spacing:-.01em}
+  .section-sub{color:var(--muted);margin:0 0 16px;font-size:14px}
+
+  .frame{border-radius:var(--r-md);overflow:hidden;box-shadow:0 0 0 1px var(--rim);background:var(--bg);margin-bottom:16px}
+  .chrome{background:var(--surface-2);padding:7px 12px;font:12px var(--mono);color:var(--faint);display:flex;gap:7px;align-items:center;border-bottom:1px solid var(--line)}
+  .chrome i{width:10px;height:10px;border-radius:50%;background:var(--rim);display:inline-block}
+  .chrome span{margin-left:8px}
+
+  header.app{display:flex;align-items:center;gap:20px;padding:0 20px;min-height:58px;border-bottom:1px solid var(--line);background:var(--surface)}
+  .brand{font-weight:800;letter-spacing:-.01em}
+  nav.tabs{display:flex;gap:2px}
+  nav.tabs a{padding:17px 12px;color:var(--muted);text-decoration:none;border-bottom:2px solid transparent;font-weight:600;font-size:14px}
+  nav.tabs a[aria-current=page]{color:var(--ink);border-color:var(--accent)}
+  .count{font:600 11px var(--mono);background:var(--info-bg);color:var(--info);padding:1px 6px;border-radius:999px;margin-left:4px}
+  .spacer{flex:1}
+  main{padding:24px}
+
+  /* Status = glyph + word + colour (never colour alone) */
+  .st{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;padding:3px 10px;border-radius:999px;white-space:nowrap}
+  .st.ok{background:var(--ok-bg);color:var(--ok)} .st.ok::before{content:"\2713"}
+  .st.bad{background:var(--bad-bg);color:var(--bad)} .st.bad::before{content:"\2715"}
+  .st.warn{background:var(--warn-bg);color:var(--warn)} .st.warn::before{content:"\25B2"}
+  .st.run{background:var(--info-bg);color:var(--info)} .st.run::before{content:"\25CF"}
+  .st.q{background:var(--surface-2);color:var(--muted);box-shadow:0 0 0 1px var(--rim) inset} .st.q::before{content:"\25C6"}
+
+  .panel{background:var(--surface);border-radius:var(--r-lg);box-shadow:0 0 0 1px var(--line) inset;padding:18px}
+  .lede{font-size:20px;font-weight:700;letter-spacing:-.01em;margin:0 0 4px}
+  .muted{color:var(--muted);font-size:14px}
+  .faint{color:var(--faint);font-size:13px}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .between{justify-content:space-between}
+  .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  @media (max-width:900px){.grid4{grid-template-columns:1fr 1fr}.grid2,.grid3{grid-template-columns:1fr}}
+  .kpi .v{font:700 28px var(--mono);font-variant-numeric:tabular-nums}
+  .kpi .l{color:var(--muted);font-size:13px}
+  .kpi.hot{background:linear-gradient(135deg,#EF44441f,var(--surface) 70%)}
+
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 18px;border-radius:12px;font:800 14px var(--sans);
+    background:var(--btn);color:var(--btn-ink);border:0;cursor:pointer;text-decoration:none;box-shadow:3px 4px 0 var(--btn-shadow);transition:transform var(--dur-fast) var(--ease),box-shadow var(--dur-fast) var(--ease)}
+  .btn:hover{transform:translate(-1px,-1px);box-shadow:4px 5px 0 var(--btn-shadow)}
+  .btn:active{transform:translate(2px,3px);box-shadow:1px 1px 0 var(--btn-shadow)}
+  .btn.ghost{background:transparent;color:var(--ink);box-shadow:0 0 0 1px var(--rim) inset;font-weight:600}
+  .btn.ghost:hover,.btn.ghost:active{transform:none}
+  .btn.sm{min-height:36px;padding:0 12px;font-size:13px;border-radius:10px}
+  .btn.danger{color:var(--bad)}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:8px}
+
+  .progress{height:8px;background:var(--surface-2);border-radius:999px;overflow:hidden;box-shadow:0 0 0 1px var(--line) inset}
+  .progress>span{display:block;height:100%;background:var(--accent)}
+  .steps{list-style:none;padding:0;margin:12px 0 0;display:flex;flex-wrap:wrap;gap:6px;font-size:12px}
+  .steps li{padding:2px 9px;border-radius:999px;background:var(--surface-2);color:var(--faint)}
+  .steps li.done{background:var(--ok-bg);color:var(--ok)} .steps li.done::before{content:"\2713  "}
+  .steps li.now{background:var(--info-bg);color:var(--info);font-weight:700} .steps li.now::before{content:"\25CF  "}
+
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{text-align:left;padding:11px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+  th{color:var(--faint);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.06em}
+  td.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+  .why{color:var(--muted);font-size:13px;padding-top:0}
+  .chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+  .chip{padding:7px 13px;border-radius:999px;border:0;box-shadow:0 0 0 1px var(--rim) inset;background:transparent;color:var(--ink);font:600 13px var(--sans);cursor:pointer;min-height:36px}
+  .chip[aria-pressed=true]{background:var(--ink);color:var(--bg)}
+
+  .group-h{font:600 12px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--faint);margin:22px 0 8px}
+  .item{display:grid;grid-template-columns:44px 1fr auto;gap:14px;align-items:center;padding:12px 14px;border-radius:var(--r-md);background:var(--surface);box-shadow:0 0 0 1px var(--line) inset;margin-bottom:8px}
+  .item .ico{width:44px;height:44px;border-radius:10px;background:var(--surface-2);display:grid;place-items:center;font:700 12px var(--mono);color:var(--accent-ink)}
+  .item .t{font-weight:700;font-size:15px}
+  .bar{width:6px;align-self:stretch;border-radius:3px}
+
+  .side{display:grid;grid-template-columns:220px 1fr}
+  @media (max-width:900px){.side{grid-template-columns:1fr}}
+  .side nav{border-right:1px solid var(--line);padding:16px 10px;background:var(--surface)}
+  .side nav a{display:flex;justify-content:space-between;padding:10px 12px;border-radius:10px;color:var(--muted);text-decoration:none;font-weight:600;font-size:14px}
+  .side nav a[aria-current=page]{background:var(--surface-2);color:var(--ink)}
+  .prow{display:grid;grid-template-columns:150px 1fr 70px;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);font-size:14px}
+  .prow:last-child{border-bottom:0}
+  .dots{display:flex;gap:3px}
+  .dots i{width:9px;height:18px;border-radius:3px;background:var(--surface-2);display:block}
+  .dots i.on{background:var(--accent)}
+
+  .thumbs{display:grid;grid-template-columns:repeat(8,1fr);gap:6px}
+  .thumb{aspect-ratio:1;border-radius:6px;background:var(--thumb-a);position:relative}
+  .thumb.b{background:var(--thumb-b)} .thumb.c{background:var(--thumb-c)}
+  .thumb.x{opacity:.35}
+  .thumb .tag{position:absolute;left:3px;bottom:3px;font:600 10px var(--sans);background:#0F172Ae6;color:#fff;padding:0 5px;border-radius:4px}
+  .layout{display:grid;gap:4px;aspect-ratio:1;padding:4px;border-radius:8px;box-shadow:0 0 0 1px var(--rim) inset}
+  .layout div{background:var(--thumb-a);border-radius:3px}
+  .tile{border-radius:var(--r-md);padding:16px;background:var(--surface);box-shadow:0 0 0 1px var(--line) inset;cursor:pointer}
+  .tile[aria-checked=true]{box-shadow:0 0 0 2px var(--accent) inset}
+  .tile strong{display:block;margin-bottom:4px}
+
+  fieldset{border:0;border-radius:var(--r-lg);background:var(--surface);box-shadow:0 0 0 1px var(--line) inset;padding:16px 18px;margin:0}
+  legend{font-weight:800;padding:0;float:left;width:100%;margin-bottom:6px}
+  .field{clear:both;display:grid;grid-template-columns:200px 1fr;gap:12px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line)}
+  .field:last-child{border-bottom:0}
+  @media (max-width:900px){.field{grid-template-columns:1fr}}
+  label{font-weight:600;font-size:14px}
+  input[type=text],input[type=number],input[type=password],input[type=time],select{font:14px var(--sans);min-height:44px;padding:0 10px;border:0;box-shadow:0 0 0 1px var(--rim) inset;border-radius:10px;background:var(--surface-2);color:var(--ink);width:100%;max-width:300px}
+  input[type=checkbox]{width:18px;height:18px;accent-color:var(--accent);vertical-align:-3px;margin-right:6px}
+  .perm{display:grid;grid-template-columns:repeat(4,1fr);gap:4px 14px;font:13px var(--mono)}
+  @media (max-width:900px){.perm{grid-template-columns:1fr 1fr}}
+  .perm .y{color:var(--ok)} .perm .y::before{content:"\2713  "}
+  .perm .n{color:var(--bad);font-weight:700} .perm .n::before{content:"\2715  "}
+  .banner{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:12px 16px;border-radius:var(--r-md);margin-bottom:16px}
+  .banner.bad{background:var(--bad-bg);color:var(--ink)} .banner.bad strong{color:var(--bad)}
+  .banner.warn{background:var(--warn-bg)} .banner.warn strong{color:var(--warn)}
+  .skel{height:14px;border-radius:6px;background:var(--surface-2);margin:8px 0}
+  .note{border-left:3px solid var(--accent);padding:10px 14px;background:var(--surface);font-size:14px;color:var(--muted);margin-top:16px;border-radius:0 10px 10px 0}
+
+  /* Phone frame with bottom tabs */
+  .phone{width:390px;max-width:100%;border-radius:36px;box-shadow:0 0 0 8px var(--surface-2),0 0 0 9px var(--rim);overflow:hidden;background:var(--bg);margin:8px auto 24px}
+  .phone main{padding:16px 14px 84px;min-height:640px;position:relative}
+  .phone .tabbar{position:absolute;left:0;right:0;bottom:0;display:grid;grid-template-columns:repeat(4,1fr);background:var(--surface);border-top:1px solid var(--line)}
+  .phone .tabbar a{display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 0 14px;font-size:11px;font-weight:600;color:var(--muted);text-decoration:none;min-height:56px}
+  .phone .tabbar a[aria-current=page]{color:var(--accent-ink)}
+  .phone .tabbar svg{width:22px;height:22px}
+  .theme-toggle{position:fixed;right:16px;bottom:16px;z-index:5}
+  .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <section class="intro" aria-labelledby="intro-h">
+    <p class="kicker">Mockup · for review · nothing is wired up</p>
+    <h1 id="intro-h">Photos companion: UI</h1>
+    <p>Three options for the <strong>Jobs</strong> home screen (A, B, C), then the shared screens: sign in, create, suggestions, settings, states and phone. All data is made up.</p>
+    <ul>
+      <li>Results always go back into Immich (album, tag, stack, Memories strip). This UI only shows thumbnails fetched through the Immich API.</li>
+      <li>Single user, one password (stored hashed). The Immich API key lives in <code>.env</code> and is never shown.</li>
+      <li>Follows the device theme (light "champagne" / dark "obsidian" from the shared design library). Use the button at the bottom right to flip it.</li>
+      <li>References used: <code>design-library/guides/dashboards.md</code> (lead with the answer, skeletons, grouping, states), <code>tokens/tokens.css</code>, Doctor Sem (Behance, KPI chips over a dense table) for A, Lisso (Dribbble, progress cards) for B, Nixtio "Dashboard UI" (Dribbble, progress rows) for C.</li>
+    </ul>
+  </section>
+
+  <!-- ===================== OPTION A ===================== -->
+  <h2 class="section-h">Option A · Table-first</h2>
+  <p class="section-sub">KPI strip, the running job, then one sortable table for queue and history. Best when many jobs pile up. Inspired by Doctor Sem's KPI chips over a dense table.</p>
+  <div class="frame">
+    <div class="chrome"><i></i><i></i><i></i><span>http://192.168.1.20:8765/jobs</span></div>
+    <header class="app">
+      <span class="brand">Photos companion</span>
+      <nav class="tabs" aria-label="Main"><a href="#" aria-current="page">Jobs</a><a href="#">Create</a><a href="#">Suggestions<span class="count">4</span></a><a href="#">Settings</a></nav>
+      <span class="spacer"></span><span class="st ok">Immich v3.4.2</span><button class="btn ghost sm" type="button">Sign out</button>
+    </header>
+    <main>
+      <p class="lede">1 job running, 3 waiting. The queue should be clear in about 4 min.</p>
+      <p class="muted" style="margin:0 0 16px">1 failed job needs a look.</p>
+      <div class="grid4" style="margin-bottom:20px">
+        <div class="panel kpi"><div class="v">3</div><div class="l">Queued</div></div>
+        <div class="panel kpi"><div class="v">1</div><div class="l">Running · limit 1 (CPU)</div></div>
+        <div class="panel kpi"><div class="v">5</div><div class="l">Done today</div></div>
+        <div class="panel kpi hot"><div class="v">1</div><div class="l">Failed · needs a look</div></div>
+      </div>
+      <div class="panel" style="margin-bottom:20px">
+        <div class="row between"><div class="row"><span class="st run">Running</span><strong>Cinematic photo · IMG_2041.jpg</strong></div><button class="btn ghost sm danger" type="button">Cancel</button></div>
+        <p class="faint" style="margin:6px 0 10px">Started 14:02 · manual · camera path: dolly (lowest stretch) · 1080×1920 · 4 s · 30 fps</p>
+        <div class="progress" role="progressbar" aria-valuenow="62" aria-valuemin="0" aria-valuemax="100" aria-label="Cinematic job progress"><span style="width:62%"></span></div>
+        <div class="row between" style="margin-top:6px"><span class="faint">Rendering frames 74 / 120</span><span class="faint">about 1 min left</span></div>
+        <ol class="steps" aria-label="Pipeline steps"><li class="done">Download</li><li class="done">Depth map</li><li class="done">Edge cleanup</li><li class="done">Camera path</li><li class="now">Render</li><li>Encode MP4</li><li>Upload</li></ol>
+      </div>
+      <div class="chips" role="group" aria-label="Filter by type"><button class="chip" aria-pressed="true" type="button">All</button><button class="chip" aria-pressed="false" type="button">Collage</button><button class="chip" aria-pressed="false" type="button">Cinematic</button><button class="chip" aria-pressed="false" type="button">Highlight video</button></div>
+      <div class="panel" style="padding:4px 8px;overflow-x:auto">
+        <table>
+          <thead><tr><th scope="col">Status</th><th scope="col">Type</th><th scope="col">Source</th><th scope="col">Items</th><th scope="col">From</th><th scope="col">Time</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+          <tbody>
+            <tr><td><span class="st q">Queued #1</span></td><td>Highlight video</td><td>Person: Asha · 2026</td><td class="num">48 → 45 s</td><td>Suggestion</td><td class="faint">waiting</td><td><div class="row"><button class="btn ghost sm" type="button" aria-label="Move Highlight video up">Up</button><button class="btn ghost sm danger" type="button">Remove</button></div></td></tr>
+            <tr><td><span class="st q">Queued #2</span></td><td>Collage</td><td>Album: Goa trip</td><td class="num">9 photos</td><td>Manual</td><td class="faint">waiting</td><td><div class="row"><button class="btn ghost sm" type="button" aria-label="Move Collage up">Up</button><button class="btn ghost sm danger" type="button">Remove</button></div></td></tr>
+            <tr><td><span class="st ok">Done</span></td><td>Collage</td><td>Event: Diwali · 1 Nov</td><td class="num">6 → 1 JPEG</td><td>Suggestion</td><td class="num">13:40 · 18 s</td><td><a class="btn ghost sm" href="#">Open in Immich</a></td></tr>
+            <tr><td><span class="st bad">Failed</span></td><td>Highlight video</td><td>Album: School day</td><td class="num">3 items</td><td>Manual</td><td class="num">12:55</td><td><div class="row"><button class="btn ghost sm" type="button">Retry</button><button class="btn ghost sm" type="button">Details</button></div></td></tr>
+            <tr><td colspan="7" class="why">Not enough usable items: needs at least 8 photos or clips after removing blurry shots and duplicates (3 left).</td></tr>
+            <tr><td><span class="st warn">Skipped</span></td><td>Cinematic photo</td><td>IMG_1990.jpg</td><td class="num">1 photo</td><td>Suggestion</td><td class="num">12:30</td><td><button class="btn ghost sm" type="button">Run anyway</button></td></tr>
+            <tr><td colspan="7" class="why">Not eligible: flat scene (depth spread 0.08, minimum 0.20).</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <!-- ===================== OPTION B ===================== -->
+  <h2 class="section-h">Option B · Agenda-first</h2>
+  <p class="section-sub">One sentence, a large "running now" card, then grouped lists: Needs attention → Up next → Done recently. Reads like a to-do list; best on phones. Inspired by Lisso's progress cards and the dashboards guide's agenda grouping.</p>
+  <div class="frame">
+    <div class="chrome"><i></i><i></i><i></i><span>http://192.168.1.20:8765/jobs</span></div>
+    <header class="app">
+      <span class="brand">Photos companion</span>
+      <nav class="tabs" aria-label="Main"><a href="#" aria-current="page">Jobs</a><a href="#">Create</a><a href="#">Suggestions<span class="count">4</span></a><a href="#">Settings</a></nav>
+      <span class="spacer"></span><span class="st ok">Immich v3.4.2</span>
+    </header>
+    <main>
+      <div class="grid2" style="grid-template-columns:1.3fr 1fr">
+        <div>
+          <p class="lede">Making a cinematic photo. 3 more waiting.</p>
+          <p class="muted" style="margin:0 0 16px">Everything should be in Immich in about 4 min.</p>
+          <div class="panel" style="padding:20px">
+            <div class="row" style="align-items:flex-start;gap:16px">
+              <div class="thumb b" style="width:96px;flex:none" role="img" aria-label="Source photo IMG_2041"></div>
+              <div style="flex:1;min-width:200px">
+                <div class="row between"><span class="st run">Running · 62%</span><button class="btn ghost sm danger" type="button">Cancel</button></div>
+                <p style="margin:8px 0 2px;font-weight:800;font-size:17px">Cinematic photo · IMG_2041.jpg</p>
+                <p class="faint" style="margin:0 0 10px">Rendering frames 74 / 120 · about 1 min left</p>
+                <div class="progress" role="progressbar" aria-valuenow="62" aria-valuemin="0" aria-valuemax="100" aria-label="Cinematic job progress"><span style="width:62%"></span></div>
+                <ol class="steps" aria-label="Pipeline steps"><li class="done">Depth map</li><li class="done">Camera path</li><li class="now">Render</li><li>Encode</li><li>Upload</li></ol>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <p class="group-h" style="margin-top:0">Needs attention · 2</p>
+          <div class="item"><span class="ico" aria-hidden="true">VID</span><div><div class="t">Highlight · School day</div><div class="faint">Only 3 usable items, needs 8</div></div><div class="row"><span class="st bad">Failed</span><button class="btn ghost sm" type="button">Retry</button></div></div>
+          <div class="item"><span class="ico" aria-hidden="true">3D</span><div><div class="t">Cinematic · IMG_1990</div><div class="faint">Flat scene, depth 0.08 &lt; 0.20</div></div><div class="row"><span class="st warn">Skipped</span><button class="btn ghost sm" type="button">Run anyway</button></div></div>
+        </div>
+      </div>
+      <p class="group-h">Up next · 3</p>
+      <div class="item"><span class="ico" aria-hidden="true">VID</span><div><div class="t">Highlight video · Asha, 2026</div><div class="faint">48 items → about 45 s · from a suggestion</div></div><div class="row"><span class="st q">#1</span><button class="btn ghost sm" type="button" aria-label="Remove Highlight video Asha">Remove</button></div></div>
+      <div class="item"><span class="ico" aria-hidden="true">COL</span><div><div class="t">Collage · Goa trip</div><div class="faint">9 photos · 1:1 · manual</div></div><div class="row"><span class="st q">#2</span><button class="btn ghost sm" type="button" aria-label="Remove Collage Goa trip">Remove</button></div></div>
+      <div class="item"><span class="ico" aria-hidden="true">3D</span><div><div class="t">Cinematic · IMG_2077</div><div class="faint">1 photo · manual</div></div><div class="row"><span class="st q">#3</span><button class="btn ghost sm" type="button" aria-label="Remove Cinematic IMG_2077">Remove</button></div></div>
+      <p class="group-h">Done recently · 5</p>
+      <div class="item"><span class="ico" aria-hidden="true">COL</span><div><div class="t">Collage · Diwali, 1 Nov</div><div class="faint">6 photos → 1 JPEG · 13:40 · in album Creations and Memories</div></div><div class="row"><span class="st ok">Done</span><a class="btn ghost sm" href="#">Open in Immich</a></div></div>
+    </main>
+  </div>
+
+  <!-- ===================== OPTION C ===================== -->
+  <h2 class="section-h">Option C · Command deck</h2>
+  <p class="section-sub">Sidebar with counts, KPI strip, and a compact progress row per job type on the left with the live log on the right. Best for watching the worker closely. Inspired by Nixtio's progress rows and the dashboards guide's command-deck skeleton.</p>
+  <div class="frame">
+    <div class="chrome"><i></i><i></i><i></i><span>http://192.168.1.20:8765/jobs</span></div>
+    <div class="side">
+      <nav aria-label="Main">
+        <p class="brand" style="padding:6px 12px 12px;margin:0">Photos companion</p>
+        <a href="#" aria-current="page">Jobs <span class="count">4</span></a><a href="#">Create</a><a href="#">Suggestions <span class="count">4</span></a><a href="#">Settings</a>
+        <p class="faint" style="padding:16px 12px 0;margin:0"><span class="st ok">Immich v3.4.2</span></p>
+      </nav>
+      <main>
+        <p class="lede">Worker busy: 1 running, 3 queued, 1 failed.</p>
+        <div class="grid4" style="margin:14px 0 18px">
+          <div class="panel kpi"><div class="v">3</div><div class="l">Queued</div></div>
+          <div class="panel kpi"><div class="v">1</div><div class="l">Running</div></div>
+          <div class="panel kpi"><div class="v">5</div><div class="l">Done today</div></div>
+          <div class="panel kpi hot"><div class="v">1</div><div class="l">Failed</div></div>
+        </div>
+        <div class="grid2">
+          <div class="panel">
+            <h3 style="margin:0 0 6px;font-size:15px">By type, today</h3>
+            <div class="prow"><span>Collage</span><span class="dots" aria-hidden="true"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i></span><span class="num faint">3 / 6</span></div>
+            <div class="prow"><span>Cinematic photo</span><span class="dots" aria-hidden="true"><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i></span><span class="num faint">2 / 6</span></div>
+            <div class="prow"><span>Highlight video</span><span class="dots" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></span><span class="num faint">0 / 2</span></div>
+            <p class="faint" style="margin:8px 0 0">Dots = done out of planned today (planned = queued + done).</p>
+          </div>
+          <div class="panel">
+            <div class="row between"><h3 style="margin:0;font-size:15px">Live: Cinematic · IMG_2041</h3><span class="st run">62%</span></div>
+            <pre style="font:12px/1.6 var(--mono);color:var(--muted);margin:10px 0 0;white-space:pre-wrap">14:02:01  download original 4032×3024 (5.1 MB)
+14:02:06  depth map (Depth Anything V2 Small, CPU) 3.8 s
+14:02:07  edge cleanup + person mask (1 person)
+14:02:09  camera path: dolly · stretch score 0.11
+14:02:10  render 74/120 frames …</pre>
+            <div class="row" style="margin-top:10px"><button class="btn ghost sm danger" type="button">Cancel</button><button class="btn ghost sm" type="button">Open queue</button></div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- ===================== SHARED SCREENS ===================== -->
+  <h2 class="section-h">Shared · Sign in</h2>
+  <p class="section-sub">Single user. Locked for 5 minutes after 5 failed tries.</p>
+  <div class="frame">
+    <div class="chrome"><i></i><i></i><i></i><span>http://192.168.1.20:8765/login</span></div>
+    <main>
+      <div class="panel" style="max-width:380px;margin:24px auto">
+        <h2 style="margin:0 0 4px;font-size:22px">Photos companion</h2>
+        <p class="muted" style="margin:0 0 16px">Works with Immich at 192.168.1.10:2283</p>
+        <div style="display:grid;gap:10px">
+          <label for="pw">Password</label>
+          <input id="pw" type="password" autocomplete="current-password" style="max-width:none">
+          <button class="btn" type="button" style="margin-top:6px">Sign in</button>
+          <p class="faint" style="margin:4px 0 0">Forgot it? Run <code>photos reset-password</code> inside the container.</p>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <h2 class="section-h">Shared · Create (start a job by hand)</h2>
+  <p class="section-sub">Three steps on one page: type → photos → layout and output. The one main action is "Add to queue".</p>
+  <div class="frame">
+    <div class="chrome"><i></i><i></i><i></i><span>http://192.168.1.20:8765/create</span></div>
+    <header class="app"><span class="brand">Photos companion</span><nav class="tabs" aria-label="Main"><a href="#">Jobs</a><a href="#" aria-current="page">Create</a><a href="#">Suggestions<span class="count">4</span></a><a href="#">Settings</a></nav></header>
+    <main>
+      <p class="group-h" style="margin-top:0">1 · What to make</p>
+      <div class="grid3" role="radiogroup" aria-label="Creation type">
+        <div class="tile" role="radio" aria-checked="true" tabindex="0"><strong>Collage</strong><span class="muted">2–9 photos → one JPEG. Layout chosen from count and orientation.</span></div>
+        <div class="tile" role="radio" aria-checked="false" tabindex="-1"><strong>Cinematic photo</strong><span class="muted">1 photo → 3D parallax MP4 plus its depth map PNG.</span></div>
+        <div class="tile" role="radio" aria-checked="false" tabindex="-1"><strong>Highlight video</strong><span class="muted">Photos and clips → MP4 with music from your folder.</span></div>
+      </div>
+      <p class="group-h">2 · Which photos</p>
+      <div class="panel">
+        <div class="row" style="margin-bottom:12px">
+          <label for="src">Source</label>
+          <select id="src" style="max-width:190px"><option>Album</option><option>Person</option><option>Date range</option><option>Immich smart search</option></select>
+          <select aria-label="Album" style="max-width:240px"><option>Goa trip (142)</option></select>
+          <button class="btn ghost sm" type="button">Load</button>
+        </div>
+        <p class="muted" style="margin:0 0 10px">142 in album · 9 picked · 21 left out (blurry, duplicate, screenshot). Select a thumbnail to swap it in or out.</p>
+        <div class="thumbs" aria-label="Candidate photos">
+          <div class="thumb" role="img" aria-label="Picked 1"></div><div class="thumb b" role="img" aria-label="Picked 2"></div><div class="thumb c" role="img" aria-label="Picked 3"></div><div class="thumb" role="img" aria-label="Picked 4"></div>
+          <div class="thumb b" role="img" aria-label="Picked 5"></div><div class="thumb c" role="img" aria-label="Picked 6"></div><div class="thumb" role="img" aria-label="Picked 7"></div><div class="thumb b" role="img" aria-label="Picked 8"></div>
+          <div class="thumb c" role="img" aria-label="Picked 9"></div><div class="thumb x" role="img" aria-label="Left out: blurry"><span class="tag">blurry</span></div><div class="thumb x b" role="img" aria-label="Left out: duplicate"><span class="tag">duplicate</span></div><div class="thumb x c" role="img" aria-label="Left out: screenshot"><span class="tag">screenshot</span></div>
+        </div>
+      </div>
+      <p class="group-h">3 · Layout and output</p>
+      <div class="grid2">
+        <div class="panel">
+          <div class="row" style="align-items:flex-start;gap:16px">
+            <div style="width:150px"><div class="layout" style="grid-template-columns:2fr 1fr 1fr;grid-template-rows:1fr 1fr 1fr" role="img" aria-label="Layout: one large slot and eight small"><div style="grid-row:span 2"></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div></div></div>
+            <div style="flex:1;min-width:180px">
+              <p style="margin:0 0 4px;font-weight:700">9 photos · 5 portrait, 4 landscape</p>
+              <p class="muted" style="margin:0 0 10px">Big slot: the photo with the most named faces and the best sharpness. Crops keep faces inside their slot.</p>
+              <div class="row"><button class="btn ghost sm" type="button">Other layout</button><select aria-label="Canvas ratio" style="max-width:110px"><option>1:1</option><option>4:5</option><option>9:16</option><option>16:9</option></select></div>
+            </div>
+          </div>
+        </div>
+        <div class="panel">
+          <p style="margin:0 0 4px;font-weight:700">Goes to Immich as</p>
+          <p class="muted" style="margin:0 0 14px">New JPEG in album <strong>Creations</strong>, tag <code>creation:collage</code>, plus a Memories entry. Source photo IDs saved in the asset's metadata.</p>
+          <div class="row"><button class="btn" type="button">Add to queue</button><span class="faint">Position #4 · about 20 s once started</span></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <h2 class="section-h">Shared · Suggestions</h2>
+  <p class="section-sub">Automatic picks from the daily scan. Each card says why it was picked.</p>
+  <div class="frame">
+    <div class="chrome"><i></i><i></i><i></i><span>http://192.168.1.20:8765/suggestions</span></div>
+    <header class="app"><span class="brand">Photos companion</span><nav class="tabs" aria-label="Main"><a href="#">Jobs</a><a href="#">Create</a><a href="#" aria-current="page">Suggestions<span class="count">4</span></a><a href="#">Settings</a></nav></header>
+    <main>
+      <div class="row between" style="margin-bottom:16px">
+        <div><p class="lede" style="font-size:18px">4 ideas from 1,204 new photos.</p><p class="faint" style="margin:0">Scanned 03:00 today · mode: suggest, I approve</p></div>
+        <div class="row"><button class="btn ghost sm" type="button">Scan now</button><button class="btn sm" type="button">Approve all</button></div>
+      </div>
+      <div class="grid2">
+        <div class="panel">
+          <div class="row between"><strong>Goa trip · 14–17 Nov</strong><span class="st run">Collage</span></div>
+          <p class="muted" style="margin:6px 0 10px">4 days, 1 place, 38 good photos of 142 · Asha, Ravi</p>
+          <div class="thumbs" style="grid-template-columns:repeat(6,1fr)"><div class="thumb"></div><div class="thumb b"></div><div class="thumb c"></div><div class="thumb"></div><div class="thumb b"></div><div class="thumb c"></div></div>
+          <p class="faint" style="margin:10px 0">Why: an event with 6 or more good photos, none used in a collage before.</p>
+          <div class="row"><button class="btn sm" type="button">Approve</button><button class="btn ghost sm" type="button">Edit first</button><button class="btn ghost sm" type="button">Dismiss</button></div>
+        </div>
+        <div class="panel">
+          <div class="row between"><strong>Asha · 2026 so far</strong><span class="st run">Highlight video</span></div>
+          <p class="muted" style="margin:6px 0 10px">48 photos and clips → about 45 s · 16:9 · Upbeat track from /music</p>
+          <div class="thumbs" style="grid-template-columns:repeat(6,1fr)"><div class="thumb c"></div><div class="thumb"></div><div class="thumb b"></div><div class="thumb c"></div><div class="thumb"></div><div class="thumb b"></div></div>
+          <p class="faint" style="margin:10px 0">Why: a named person with 40+ items this year. Favourites go in first.</p>
+          <div class="row"><button class="btn sm" type="button">Approve</button><button class="btn ghost sm" type="button">Edit first</button><button class="btn ghost sm" type="button">Dismiss</button></div>
+        </div>
+        <div class="panel">
+          <div class="row between"><strong>IMG_2077 · beach portrait</strong><span class="st run">Cinematic</span></div>
+          <p class="muted" style="margin:6px 0 10px">Depth spread 0.46 · 1 clear subject · 4032×3024 · sharp</p>
+          <div class="row"><button class="btn sm" type="button">Approve</button><button class="btn ghost sm" type="button">Dismiss</button></div>
+        </div>
+        <div class="panel">
+          <p style="margin:0 0 4px;font-weight:700">Empty state</p>
+          <p class="muted" style="margin:0">No ideas yet. The scan runs daily at 03:00 and looks at photos added since the last scan. Use <strong>Scan now</strong> to run it straight away.</p>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <h2 class="section-h">Shared · Settings</h2>
+  <p class="section-sub">Everything the worker uses. Changes apply to the next job; running jobs keep their settings.</p>
+  <div class="frame">
+    <div class="chrome"><i></i><i></i><i></i><span>http://192.168.1.20:8765/settings</span></div>
+    <header class="app"><span class="brand">Photos companion</span><nav class="tabs" aria-label="Main"><a href="#">Jobs</a><a href="#">Create</a><a href="#">Suggestions<span class="count">4</span></a><a href="#" aria-current="page">Settings</a></nav></header>
+    <main style="display:grid;gap:16px">
+      <fieldset>
+        <legend>Immich connection</legend>
+        <div class="field"><span>Server</span><span><code>http://192.168.1.10:2283</code> <span class="faint">· from .env, read-only</span></span></div>
+        <div class="field"><span>API key</span><span class="row">Set in .env, never shown here. <button class="btn ghost sm" type="button">Check permissions</button></span></div>
+        <div class="field" style="align-items:start"><span>Permission check</span>
+          <div>
+            <div class="perm" aria-label="Permission check results">
+              <span class="y">asset.read</span><span class="y">asset.view</span><span class="y">asset.download</span><span class="y">asset.upload</span>
+              <span class="y">asset.update</span><span class="y">album.read</span><span class="y">album.create</span><span class="y">albumAsset.create</span>
+              <span class="y">person.read</span><span class="y">face.read</span><span class="y">tag.read</span><span class="y">tag.create</span>
+              <span class="y">tag.asset</span><span class="y">stack.create</span><span class="y">memory.create</span><span class="n">memoryAsset.create missing</span>
+            </div>
+            <p style="color:var(--bad);font-size:13px;margin:8px 0 0">Creations won't appear in the Memories strip until <code>memoryAsset.create</code> is added to the key in Immich.</p>
+          </div>
+        </div>
+      </fieldset>
+      <div class="grid2">
+        <fieldset>
+          <legend>Automatic suggestions</legend>
+          <div class="field"><label for="mode">Mode</label><select id="mode"><option>Suggest, I approve</option><option>Create and upload automatically</option><option>Off</option></select></div>
+          <div class="field"><label for="scan">Daily scan at</label><input id="scan" type="time" value="03:00"></div>
+          <div class="field"><label for="gap">New event after a gap of</label><span class="row"><input id="gap" type="number" value="3" style="max-width:90px"> hours</span></div>
+          <div class="field"><label for="minp">Min. good photos per event</label><input id="minp" type="number" value="6" style="max-width:90px"></div>
+          <div class="field"><label for="maxd">Max suggestions per day</label><input id="maxd" type="number" value="3" style="max-width:90px"></div>
+        </fieldset>
+        <fieldset>
+          <legend>Worker and output</legend>
+          <div class="field"><label for="conc">Jobs at the same time</label><input id="conc" type="number" value="1" style="max-width:90px"></div>
+          <div class="field"><label for="album">Album for creations</label><input id="album" type="text" value="Creations"></div>
+          <div class="field"><label for="tagp">Tag prefix</label><input id="tagp" type="text" value="creation:"></div>
+          <div class="field"><span>Also</span><span class="row"><label><input type="checkbox" checked>Add to Memories strip</label><label><input type="checkbox" checked>Stack with source photo</label></span></div>
+        </fieldset>
+      </div>
+      <div class="grid3">
+        <fieldset>
+          <legend>Collage</legend>
+          <div class="field"><label for="cr">Canvas ratio</label><select id="cr"><option>1:1</option><option>4:5</option><option>9:16</option><option>16:9</option></select></div>
+          <div class="field"><label for="cmax">Max photos, manual / auto</label><span class="row"><input id="cmax" type="number" value="9" style="max-width:70px"> / <input aria-label="Max photos, auto" type="number" value="12" style="max-width:70px"></span></div>
+          <div class="field"><label for="bw">Border / corner radius</label><span class="row"><input id="bw" type="number" value="8" style="max-width:70px"> / <input aria-label="Corner radius" type="number" value="12" style="max-width:70px"> px</span></div>
+          <div class="field"><label for="bc">Border colour</label><input id="bc" type="text" value="#FFFFFF" style="max-width:120px"></div>
+          <div class="field"><span>Filters</span><span class="row"><label><input type="checkbox" checked>Skip blurry</label><label><input type="checkbox" checked>Face-aware crop</label></span></div>
+        </fieldset>
+        <fieldset>
+          <legend>Cinematic photo</legend>
+          <div class="field"><label for="mp">Camera motion</label><select id="mp"><option>Auto (lowest stretch)</option><option>Zoom in</option><option>Dolly</option><option>Circle</option></select></div>
+          <div class="field"><label for="dur">Length</label><span class="row"><input id="dur" type="number" value="4" style="max-width:70px"> s · <select aria-label="Frame rate" style="max-width:100px"><option>30 fps</option><option>24 fps</option></select></span></div>
+          <div class="field"><label for="res">Resolution</label><select id="res"><option>1080p</option><option>720p</option></select></div>
+          <div class="field"><label for="ds">Min. depth spread</label><input id="ds" type="number" value="0.20" step="0.05" style="max-width:90px"></div>
+          <div class="field"><span>Depth map</span><label><input type="checkbox" checked>Upload PNG to Immich</label></div>
+        </fieldset>
+        <fieldset>
+          <legend>Highlight video</legend>
+          <div class="field"><label for="hl">Length</label><span class="row"><input id="hl" type="number" value="30" style="max-width:70px"> to <input aria-label="Maximum length" type="number" value="90" style="max-width:70px"> s</span></div>
+          <div class="field"><label for="ar">Aspect</label><select id="ar"><option>16:9</option><option>9:16</option><option>1:1</option></select></div>
+          <div class="field"><label for="pd">Seconds per photo</label><input id="pd" type="number" value="3" style="max-width:70px"></div>
+          <div class="field"><span>Music folder</span><span><code>/music</code> <span class="faint">· 23 tracks found</span></span></div>
+          <div class="field"><span>Audio</span><span class="row"><label><input type="checkbox" checked>Cut on beat</label><label><input type="checkbox" checked>Lower music when people talk</label></span></div>
+        </fieldset>
+      </div>
+      <fieldset>
+        <legend>Account</legend>
+        <div class="field"><label for="np">New password</label><span class="row"><input id="np" type="password" autocomplete="new-password"><button class="btn ghost sm" type="button">Change</button></span></div>
+      </fieldset>
+      <div class="row"><button class="btn" type="button">Save settings</button><span class="faint">Applies to the next job.</span></div>
+      <div class="note">Open point: should the default <strong>Mode</strong> be "Suggest, I approve" (shown) or "Create and upload automatically", which is closer to Google's "New for you"?</div>
+    </main>
+  </div>
+
+  <h2 class="section-h">Shared · Error, offline and loading states</h2>
+  <p class="section-sub">Banners sit at the top of whichever screen is open. Stale data stays visible and is marked.</p>
+  <div class="frame">
+    <main>
+      <div class="banner bad" role="alert"><span><strong>✕ Can't reach Immich</strong> at 192.168.1.10:2283 since 14:05. Jobs are paused; nothing is lost. Showing data from 14:04.</span><button class="btn ghost sm" type="button">Retry now</button></div>
+      <div class="banner warn" role="status"><span><strong>▲ Music folder is empty.</strong> Highlight videos will be silent until you add tracks to <code>/music</code>.</span></div>
+      <div class="grid3">
+        <div class="panel" aria-busy="true" aria-label="Loading jobs"><div class="skel" style="width:40%"></div><div class="skel"></div><div class="skel" style="width:70%"></div></div>
+        <div class="panel"><p style="margin:0 0 4px;font-weight:700">Empty queue</p><p class="muted" style="margin:0">Nothing waiting. Start one from <strong>Create</strong>, or approve an idea in <strong>Suggestions</strong>.</p></div>
+        <div class="panel"><p style="margin:0 0 4px;font-weight:700">First run</p><p class="muted" style="margin:0">Downloading models (Depth Anything V2 Small, 99 MB). Cinematic jobs wait until this finishes.</p><div class="progress" style="margin-top:10px" role="progressbar" aria-valuenow="35" aria-valuemin="0" aria-valuemax="100" aria-label="Model download"><span style="width:35%"></span></div></div>
+      </div>
+    </main>
+  </div>
+
+  <h2 class="section-h">Shared · Phone (390 px, option B layout)</h2>
+  <p class="section-sub">Bottom tab bar with 4 items; the desktop header doesn't wrap.</p>
+  <div class="phone" role="img" aria-label="Phone preview of the jobs screen">
+    <main>
+      <p class="lede" style="font-size:18px">Making a cinematic photo. 3 more waiting.</p>
+      <div class="panel" style="margin:12px 0">
+        <div class="row between"><span class="st run">Running · 62%</span><span class="faint">~1 min</span></div>
+        <p style="margin:8px 0;font-weight:800">Cinematic · IMG_2041</p>
+        <div class="progress"><span style="width:62%"></span></div>
+      </div>
+      <p class="group-h">Needs attention · 2</p>
+      <div class="item" style="grid-template-columns:1fr auto"><div><div class="t">Highlight · School day</div><div class="faint">3 usable, needs 8</div></div><span class="st bad">Failed</span></div>
+      <div class="item" style="grid-template-columns:1fr auto"><div><div class="t">Cinematic · IMG_1990</div><div class="faint">Flat scene</div></div><span class="st warn">Skipped</span></div>
+      <p class="group-h">Up next · 3</p>
+      <div class="item" style="grid-template-columns:1fr auto"><div><div class="t">Highlight · Asha, 2026</div><div class="faint">48 items → 45 s</div></div><span class="st q">#1</span></div>
+      <nav class="tabbar" aria-label="Main">
+        <a href="#" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Jobs</a>
+        <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Create</a>
+        <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/></svg>Ideas</a>
+        <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Settings</a>
+      </nav>
+    </main>
+  </div>
+
+</div>
+<button class="btn ghost sm theme-toggle" type="button" id="themeBtn" aria-label="Switch light or dark theme">Theme</button>
+<script>
+  document.getElementById('themeBtn').addEventListener('click', function () {
+    var cur = document.documentElement.dataset.theme || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+    var next = cur === 'light' ? 'dark' : 'light';
+    document.documentElement.dataset.theme = next;
+    try { localStorage.setItem('photos-theme', next); } catch (e) {}
+  });
+</script>
+</body>
+</html>

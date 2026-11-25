@@ -1,0 +1,18 @@
+# Runtime dependencies, exact pins (checked 24 Nov 2026).
+# immichpy must match the Immich server: 9.1.0 is generated for Immich v3.3.1 (the test server).
+# For an Immich v3.4.x server use immichpy==10.3.0 (see COMPATIBILITY.csv in the immichpy repo).
+immichpy==9.1.0
+aiohttp==3.14.5
+fastapi==0.165.0
+starlette==1.10.0
+uvicorn==0.54.0
+jinja2==3.1.6
+python-multipart==0.0.34
+pydantic==2.14.4
+pydantic-settings==2.16.3
+# Imaging and local ML (CPU only)
+pillow==13.0.0
+pillow-heif==1.8.1
+numpy==2.5.5
+opencv-python-headless==5.1.0.95
+onnxruntime==1.32.0

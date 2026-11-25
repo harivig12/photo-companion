@@ -1,0 +1,35 @@
+# Photos companion as a Portainer stack (or `docker compose -f docker-compose.portainer.yml up -d`).
+# Uses the prebuilt image, so nothing is built on your server. See docs/install.md.
+#
+# Set these in Portainer under "Environment variables" (or in a .env file next to this one):
+#   IMMICH_URL        required, e.g. http://192.168.1.10:2283 (not localhost: that is this container)
+#   IMMICH_API_KEY    required, permissions listed in docs/install.md
+#   PHOTOS_PASSWORD   optional, 12+ characters; empty = one is generated and printed once in the log
+#   PHOTOS_BIND       optional, 127.0.0.1 (default) or 0.0.0.0 to reach the UI from the LAN
+#   PHOTOS_OUTPUT_MODE optional, immich (default) or folder (test mode: never writes to Immich)
+#   MUSIC_DIR         optional, host folder with your music tracks, default ./music
+#   PHOTOS_IMAGE      optional, default ghcr.io/harivig12/photos-companion:latest
+name: photos
+services:
+  photos:
+    image: ${PHOTOS_IMAGE:-ghcr.io/harivig12/photos-companion:latest}
+    container_name: photos
+    restart: unless-stopped
+    environment:
+      IMMICH_URL: ${IMMICH_URL:?set IMMICH_URL}
+      IMMICH_API_KEY: ${IMMICH_API_KEY:?set IMMICH_API_KEY}
+      PHOTOS_PASSWORD: ${PHOTOS_PASSWORD:-}
+      PHOTOS_OUTPUT_MODE: ${PHOTOS_OUTPUT_MODE:-immich}
+      PHOTOS_SECURE_COOKIE: ${PHOTOS_SECURE_COOKIE:-false}
+      PHOTOS_SESSION_HOURS: ${PHOTOS_SESSION_HOURS:-12}
+      PHOTOS_DATA_DIR: /data
+      PHOTOS_MUSIC_DIR: /music
+    ports:
+      - "${PHOTOS_BIND:-127.0.0.1}:8765:8765"
+    volumes:
+      # A named volume keeps the right owner (the container runs as UID 1000), so no chown is needed.
+      - photos-data:/data
+      - ${MUSIC_DIR:-./music}:/music:ro
+
+volumes:
+  photos-data:

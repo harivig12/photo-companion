@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Photos companion{% endblock %}</title>
+<script src="/static/theme.js"></script>
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div class="shell">
+  <nav class="side" aria-label="Main">
+    <p class="brand">Photos companion</p>
+    <a class="nav" href="/jobs" {% if nav == 'jobs' %}aria-current="page"{% endif %}>Jobs
+      {% set active = counts.queued + counts.running %}{% if active %}<span class="count" aria-label="{{ active }} active">{{ active }}</span>{% endif %}</a>
+    <a class="nav" href="/create" {% if nav == 'create' %}aria-current="page"{% endif %}>Create</a>
+    <a class="nav" href="/suggestions" {% if nav == 'suggestions' %}aria-current="page"{% endif %}>Suggestions</a>
+    <a class="nav" href="/settings" {% if nav == 'settings' %}aria-current="page"{% endif %}>Settings</a>
+    <div class="foot">
+      {% if immich.reachable %}
+        <span class="st st-done">Immich {{ immich.version }}</span>
+      {% else %}
+        <span class="st st-failed">Immich offline</span>
+      {% endif %}
+      <button class="btn ghost sm theme-toggle" type="button" id="theme-toggle" aria-label="Switch between light and dark theme">Theme</button>
+      <form method="post" action="/logout"><button class="btn ghost sm" type="submit">Sign out</button></form>
+      <span class="faint">v{{ version }}</span>
+    </div>
+  </nav>
+  <main id="main">
+    {% if not immich.reachable %}
+    <div class="banner bad" role="alert"><span><strong>✕ Can't reach Immich.</strong> {{ immich.error }} Jobs wait until it's back; nothing is lost.</span></div>
+    {% endif %}
+    {% if folder_mode %}
+    <div class="banner warn" role="status"><span><strong>▲ Test mode.</strong> Results are saved to <code>{{ output_dir }}</code> and are not uploaded to Immich.</span></div>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+</div>
+<script src="/static/app.js"></script>
+</body>
+</html>

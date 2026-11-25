@@ -1,0 +1,22 @@
+# Photos companion: runs next to (not inside) your Immich stack and talks to it over the network.
+# 1. cp .env.example .env and fill in IMMICH_URL and IMMICH_API_KEY.
+# 2. mkdir data music  (put your music tracks in ./music)
+# 3. docker compose up -d --build   then open http://localhost:8765
+name: photos
+
+services:
+  photos:
+    build: ./service
+    image: photos-companion:0.1.0
+    container_name: photos
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      PHOTOS_DATA_DIR: /data
+      PHOTOS_MUSIC_DIR: /music
+    ports:
+      # Localhost only by default. Set PHOTOS_BIND=0.0.0.0 in .env to reach the UI from the LAN.
+      - "${PHOTOS_BIND:-127.0.0.1}:8765:8765"
+    volumes:
+      - ./data:/data
+      - ./music:/music:ro

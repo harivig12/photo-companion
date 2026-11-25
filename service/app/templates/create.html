@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}Create · Photos companion{% endblock %}
+{% block content %}
+<h1>Create</h1>
+<p class="muted">Queue a creation by hand. Results go to Immich as set in Settings (album, tag, stack).</p>
+
+{% if presets %}
+<form method="get" action="/create" class="row panel" aria-label="Start from a preset">
+  <label for="preset">Start from a preset</label>
+  <select id="preset" name="preset">
+    <option value="">None</option>
+    {% for p in presets %}<option value="{{ p.id }}" {% if values.preset_id == p.id|string %}selected{% endif %}>{{ p.name }} · {{ kind_labels[p.kind] }}</option>{% endfor %}
+  </select>
+  <button class="btn ghost sm" type="submit">Use</button>
+  {% if preset %}<span class="faint">Using "{{ preset.name }}": {{ preset.params | tojson }}</span>{% endif %}
+</form>
+{% endif %}
+
+<form method="post" action="/create" class="stack">
+  {% if values.preset_id %}<input type="hidden" name="preset_id" value="{{ values.preset_id }}">{% endif %}
+  <fieldset>
+    <legend>1 · What to make</legend>
+    <div class="tiles tiles-4" role="radiogroup" aria-label="Creation type">
+      <label class="tile"><input type="radio" name="kind" value="collage" {% if values.kind == 'collage' %}checked{% endif %}><strong>Collage</strong><span class="muted">2–12 photos → one JPEG.</span></label>
+      <label class="tile"><input type="radio" name="kind" value="cinematic" {% if values.kind == 'cinematic' %}checked{% endif %}><strong>Cinematic photo</strong><span class="muted">1 photo → 3D MP4 + depth map.</span></label>
+      <label class="tile"><input type="radio" name="kind" value="highlight" {% if values.kind == 'highlight' %}checked{% endif %}><strong>Highlight video</strong><span class="muted">Photos and clips → MP4 with music and a title card.</span></label>
+      <label class="tile"><input type="radio" name="kind" value="popout" {% if values.kind == 'popout' %}checked{% endif %}><strong>Pop-out photo</strong><span class="muted">1 photo with people → splash, spotlight, blur, frame, sticker.</span></label>
+    </div>
+    {% if errors.kind %}<p class="err" role="alert">{{ errors.kind }}</p>{% endif %}
+  </fieldset>
+
+  <fieldset>
+    <legend>2 · Which photos</legend>
+    <div class="field">
+      <label for="album_id">Album</label>
+      <div>
+        <select id="album_id" name="album_id" {% if album_error %}disabled{% endif %}>
+          <option value="">None</option>
+          {% for a in albums %}<option value="{{ a.id }}" {% if values.album_id == a.id %}selected{% endif %}>{{ a.name }} ({{ a.count }})</option>{% endfor %}
+        </select>
+        {% if album_error %}<p class="err">Albums unavailable: {{ album_error }}</p>{% endif %}
+        <p class="faint">For a pop-out photo, the best photo of 1–6 people in the album is picked.</p>
+      </div>
+    </div>
+    <div class="field">
+      <label for="asset_ids">Or asset IDs</label>
+      <div>
+        <textarea id="asset_ids" name="asset_ids" aria-describedby="asset-help" placeholder="One Immich asset ID per line">{{ values.asset_ids or '' }}</textarea>
+        <p class="faint" id="asset-help">Open a photo in Immich: the ID is the last part of its address.</p>
+      </div>
+    </div>
+    <div class="field">
+      <label for="person_id">Person (highlight)</label>
+      <select id="person_id" name="person_id" {% if album_error %}disabled{% endif %}>
+        <option value="">Anyone</option>
+        {% for p in people %}<option value="{{ p.id }}" {% if values.person_id == p.id %}selected{% endif %}>{{ p.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <span>Dates (highlight)</span>
+      <span class="row">
+        <label class="sr-only" for="date_from">From</label><input id="date_from" name="date_from" type="date" value="{{ values.date_from or '' }}">
+        to
+        <label class="sr-only" for="date_to">To</label><input id="date_to" name="date_to" type="date" value="{{ values.date_to or '' }}">
+      </span>
+    </div>
+    {% if errors.source %}<p class="err" role="alert">{{ errors.source }}</p>{% endif %}
+  </fieldset>
+
+  <fieldset>
+    <legend>3 · Text and look</legend>
+    <div class="field">
+      <label for="caption">Caption / title</label>
+      <div>
+        <input id="caption" name="caption" type="text" maxlength="60" value="{{ values.caption or '' }}" aria-describedby="cap-help" {% if errors.caption %}aria-invalid="true"{% endif %}>
+        <p class="faint" id="cap-help">On collages (scatter / fan), the pop-out frame and the highlight title card. Empty = automatic (album, place or event). Editable later.</p>
+        {% if errors.caption %}<p class="err">{{ errors.caption }}</p>{% endif %}
+      </div>
+    </div>
+    <div class="field">
+      <label for="style">Collage style</label>
+      <select id="style" name="style" {% if errors.style %}aria-invalid="true"{% endif %}>
+        <option value="">As in Settings</option>
+        {% for v, t in [('random', 'Random'), ('prints', 'Tilted prints'), ('scatter', 'Polaroid scatter'), ('fan', 'Gallery fan'), ('grid', 'Flat grid')] %}
+        <option value="{{ v }}" {% if values.style == v %}selected{% endif %}>{{ t }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <span>Pop-out styles</span>
+      <div>
+        {% set chosen = values.styles if values.styles else popout_default %}
+        <span class="row">{% for s in popout_styles %}<label><input type="checkbox" name="styles" value="{{ s }}" {% if s in chosen %}checked{% endif %}>{{ popout_labels[s] }}</label>{% endfor %}<label><input type="checkbox" name="splash_video">Colour-splash video</label></span>
+        {% if errors.styles %}<p class="err" role="alert">{{ errors.styles }}</p>{% endif %}
+      </div>
+    </div>
+    <div class="field">
+      <label for="title">Name in the job list (optional)</label>
+      <input id="title" name="title" type="text" maxlength="120" value="{{ values.title or '' }}">
+    </div>
+  </fieldset>
+
+  <div class="row"><button class="btn" type="submit">Add to queue</button></div>
+</form>
+{% endblock %}

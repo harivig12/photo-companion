@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Edit · Photos companion{% endblock %}
+{% block content %}
+<h1>Edit {{ job.kind_label | lower }}</h1>
+<p class="muted">Change the text and it's made again with exactly the same photos{% if job.kind == 'highlight' %} and music{% endif %}. The new version replaces this one in the list.
+  {% if not folder_mode %}The old version stays in Immich; delete it there if you don't want both.{% endif %}</p>
+
+<form method="post" action="/jobs/{{ job.id }}/edit" class="stack">
+  <fieldset>
+    <legend>Text</legend>
+    <div class="field">
+      <label for="title">Name in the job list</label>
+      <input id="title" name="title" type="text" maxlength="120" value="{{ values.title }}">
+    </div>
+    {% if 'caption' in editable %}
+    <div class="field">
+      <label for="caption">{% if job.kind == 'highlight' %}Title card{% elif job.kind == 'popout' %}Frame caption{% else %}Caption{% endif %}</label>
+      <div>
+        <input id="caption" name="caption" type="text" maxlength="60" value="{{ values.caption }}" aria-describedby="caption-help">
+        <p class="faint" id="caption-help">{% if job.kind == 'collage' %}Shown on the polaroid scatter and gallery fan styles.{% elif job.kind == 'popout' %}Shown under the pop-out-of-frame photo.{% else %}The big line on the opening card.{% endif %} Leave empty for the automatic text.</p>
+      </div>
+    </div>
+    {% endif %}
+    {% if 'subtitle' in editable %}
+    <div class="field">
+      <label for="subtitle">Date line</label>
+      <input id="subtitle" name="subtitle" type="text" maxlength="60" value="{{ values.subtitle }}">
+    </div>
+    {% endif %}
+  </fieldset>
+
+  {% if 'style' in editable or 'title_style' in editable or 'styles' in editable %}
+  <fieldset>
+    <legend>Look</legend>
+    {% if 'style' in editable %}
+    <div class="field">
+      <label for="style">Collage style</label>
+      <select id="style" name="style">
+        {% for v, t in [('prints', 'Tilted prints'), ('scatter', 'Polaroid scatter'), ('fan', 'Gallery fan'), ('grid', 'Flat grid')] %}
+        <option value="{{ v }}" {% if values.style == v %}selected{% endif %}>{{ t }}</option>{% endfor %}
+      </select>
+    </div>
+    {% endif %}
+    {% if 'title_style' in editable %}
+    <div class="field">
+      <label for="title_style">Title animation</label>
+      <select id="title_style" name="title_style">
+        {% for v, t in [('fade-up', 'Fade up'), ('typewriter', 'Typewriter'), ('letters', 'Letter by letter')] %}
+        <option value="{{ v }}" {% if values.title_style == v %}selected{% endif %}>{{ t }}</option>{% endfor %}
+      </select>
+    </div>
+    {% endif %}
+    {% if 'styles' in editable %}
+    <div class="field">
+      <span>Styles</span>
+      <div>
+        <span class="row">{% for s in popout_styles %}<label><input type="checkbox" name="styles" value="{{ s }}" {% if s in values.styles %}checked{% endif %}>{{ popout_labels[s] }}</label>{% endfor %}</span>
+        {% if errors.styles %}<p class="err" role="alert">{{ errors.styles }}</p>{% endif %}
+      </div>
+    </div>
+    {% endif %}
+  </fieldset>
+  {% endif %}
+
+  <div class="row"><button class="btn" type="submit">Make it again</button><a class="btn ghost" href="/jobs">Cancel</a></div>
+</form>
+{% endblock %}

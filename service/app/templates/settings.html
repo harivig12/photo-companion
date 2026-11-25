@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+{% block title %}Settings · Photos companion{% endblock %}
+
+{% macro err(key) %}{% if errors.get(key) %}<p class="err" id="err-{{ key|replace('.', '-') }}">{{ errors[key] }}</p>{% endif %}{% endmacro %}
+{% macro aria(key) %}{% if errors.get(key) %}aria-invalid="true" aria-describedby="err-{{ key|replace('.', '-') }}"{% endif %}{% endmacro %}
+{% macro number(section, name, label, value, step=None, unit=None) %}
+<div class="field">
+  <label for="{{ section }}-{{ name }}">{{ label }}</label>
+  <div>
+    <span class="row"><input class="short" id="{{ section }}-{{ name }}" name="{{ section }}.{{ name }}" type="number" value="{{ value }}" {% if step %}step="{{ step }}"{% endif %} {{ aria(section ~ '.' ~ name) }}>{% if unit %} {{ unit }}{% endif %}</span>
+    {{ err(section ~ '.' ~ name) }}
+  </div>
+</div>
+{% endmacro %}
+{% macro select(section, name, label, value, options) %}
+<div class="field">
+  <label for="{{ section }}-{{ name }}">{{ label }}</label>
+  <div>
+    <select id="{{ section }}-{{ name }}" name="{{ section }}.{{ name }}" {{ aria(section ~ '.' ~ name) }}>
+      {% for v, text in options %}<option value="{{ v }}" {% if v|string == value|string %}selected{% endif %}>{{ text }}</option>{% endfor %}
+    </select>
+    {{ err(section ~ '.' ~ name) }}
+  </div>
+</div>
+{% endmacro %}
+{% macro check(section, name, label, value) %}
+<label><input type="checkbox" name="{{ section }}.{{ name }}" {% if value %}checked{% endif %}>{{ label }}</label>
+{% endmacro %}
+
+{% block content %}
+<h1>Settings</h1>
+<p class="faint">Changes apply to the next job; a running job keeps its settings.</p>
+{% if saved %}<div class="banner ok" role="status"><span><strong>✓ Saved.</strong></span></div>{% endif %}
+{% if errors %}<div class="banner bad" role="alert"><span><strong>✕ Not saved.</strong> Fix the fields marked below.</span></div>{% endif %}
+
+<div class="stack">
+<fieldset>
+  <legend>Immich connection</legend>
+  <div class="field"><span>Server</span><span><code>{{ immich_url }}</code> <span class="faint">· from .env, read-only</span></span></div>
+  <div class="field"><span>API key</span>
+    <form method="post" action="/settings/permissions" class="row">Set in .env, never shown here. <button class="btn ghost sm" type="submit">Check permissions</button></form>
+  </div>
+  {% if report_error %}<p class="err" role="alert">{{ report_error }}</p>{% endif %}
+  {% if report %}
+  <div class="field">
+    <span>Key "{{ report.key_name }}"</span>
+    <div>
+      <div class="perm" aria-label="Permission check results">
+        {% for p in required %}
+          {% if p in report.missing %}<span class="n">{{ p }} missing</span>{% else %}<span class="y">{{ p }}</span>{% endif %}
+        {% endfor %}
+      </div>
+      {% if report.missing %}
+        <p class="err">Missing permissions affect: {{ affected | join(', ') }}. Add them to the key in Immich (Account Settings → API Keys).</p>
+      {% else %}
+        <p class="faint">All {{ required|length }} permissions are present.</p>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+</fieldset>
+
+<form method="post" action="/settings" class="stack">
+  <div class="grid2">
+    <fieldset>
+      <legend>Automatic suggestions</legend>
+      {{ select('suggestions', 'mode', 'Mode', s.suggestions.mode, [('suggest', 'Suggest, I approve'), ('auto', 'Create and upload automatically'), ('off', 'Off')]) }}
+      <div class="field">
+        <label for="suggestions-scan_at">Daily scan at</label>
+        <div><input id="suggestions-scan_at" name="suggestions.scan_at" type="time" value="{{ s.suggestions.scan_at }}" {{ aria('suggestions.scan_at') }}>{{ err('suggestions.scan_at') }}</div>
+      </div>
+      {{ number('suggestions', 'event_gap_hours', 'New event after a gap of', s.suggestions.event_gap_hours, unit='hours') }}
+      {{ number('suggestions', 'min_good_photos', 'Min. good photos per event', s.suggestions.min_good_photos) }}
+      {{ number('suggestions', 'max_per_day', 'Max suggestions per day', s.suggestions.max_per_day) }}
+    </fieldset>
+    <fieldset>
+      <legend>Worker and output</legend>
+      {{ number('output', 'concurrency', 'Jobs at the same time', s.output.concurrency) }}
+      <div class="field">
+        <label for="output-album_name">Album for creations</label>
+        <div><input id="output-album_name" name="output.album_name" type="text" value="{{ s.output.album_name }}" {{ aria('output.album_name') }}>{{ err('output.album_name') }}</div>
+      </div>
+      <div class="field">
+        <label for="output-tag_prefix">Tag prefix</label>
+        <div><input id="output-tag_prefix" name="output.tag_prefix" type="text" value="{{ s.output.tag_prefix }}" {{ aria('output.tag_prefix') }}>{{ err('output.tag_prefix') }}</div>
+      </div>
+      <div class="field"><span>Also</span><span class="row">{{ check('output', 'add_to_memories', 'Birthday memories', s.output.add_to_memories) }}{{ check('output', 'named_albums', 'Album per event', s.output.named_albums) }}{{ check('output', 'stack_with_source', 'Stack with source photo', s.output.stack_with_source) }}</span></div>
+      <p class="faint">Immich already makes its own "N years ago" memories, so only birthdays become memories (shown with the person's name). Every other event gets an album named after it, like "Deepavali 2026" or "Yercaud trip · Sep 2026".</p>
+    </fieldset>
+  </div>
+
+  <div class="grid3">
+    <fieldset>
+      <legend>Collage</legend>
+      {{ select('collage', 'style', 'Style', s.collage.style, [('random', 'Random (prints, scatter or fan)'), ('prints', 'Tilted prints'), ('scatter', 'Polaroid scatter'), ('fan', 'Gallery fan'), ('grid', 'Flat grid')]) }}
+      {{ select('collage', 'canvas_ratio', 'Canvas ratio', s.collage.canvas_ratio, [('1:1', '1:1'), ('4:5', '4:5'), ('9:16', '9:16'), ('16:9', '16:9')]) }}
+      {{ number('collage', 'max_photos_manual', 'Max photos, manual', s.collage.max_photos_manual) }}
+      {{ number('collage', 'max_photos_auto', 'Max photos, auto', s.collage.max_photos_auto) }}
+      {{ number('collage', 'border_px', 'Border width', s.collage.border_px, unit='px') }}
+      {{ number('collage', 'radius_px', 'Corner radius', s.collage.radius_px, unit='px') }}
+      <div class="field">
+        <label for="collage-border_colour">Border colour</label>
+        <div><input class="short" id="collage-border_colour" name="collage.border_colour" type="text" value="{{ s.collage.border_colour }}" {{ aria('collage.border_colour') }}>{{ err('collage.border_colour') }}</div>
+      </div>
+      <div class="field"><span>Filters</span><span class="row">{{ check('collage', 'skip_blurry', 'Skip blurry', s.collage.skip_blurry) }}{{ check('collage', 'face_aware_crop', 'Face-aware crop', s.collage.face_aware_crop) }}</span></div>
+    </fieldset>
+    <fieldset>
+      <legend>Cinematic photo</legend>
+      {{ select('cinematic', 'motion', 'Camera motion', s.cinematic.motion, [('auto', 'Auto (lowest stretch)'), ('zoom', 'Zoom in'), ('dolly', 'Dolly'), ('circle', 'Circle')]) }}
+      {{ number('cinematic', 'seconds', 'Length', s.cinematic.seconds, unit='s') }}
+      {{ select('cinematic', 'fps', 'Frame rate', s.cinematic.fps, [(30, '30 fps'), (24, '24 fps')]) }}
+      {{ select('cinematic', 'resolution', 'Resolution', s.cinematic.resolution, [('1080p', '1080p'), ('720p', '720p')]) }}
+      {{ number('cinematic', 'min_depth_spread', 'Min. depth spread', s.cinematic.min_depth_spread, step='0.05') }}
+      <div class="field"><span>Depth map</span>{{ check('cinematic', 'upload_depth_map', 'Upload PNG to Immich', s.cinematic.upload_depth_map) }}</div>
+    </fieldset>
+    <fieldset>
+      <legend>Highlight video</legend>
+      {{ number('highlight', 'min_seconds', 'Shortest', s.highlight.min_seconds, unit='s') }}
+      {{ number('highlight', 'max_seconds', 'Longest', s.highlight.max_seconds, unit='s') }}
+      {{ err('highlight') }}
+      {{ select('highlight', 'aspect', 'Aspect', s.highlight.aspect, [('16:9', '16:9'), ('9:16', '9:16'), ('1:1', '1:1')]) }}
+      {{ number('highlight', 'seconds_per_photo', 'Seconds per photo', s.highlight.seconds_per_photo, step='0.5') }}
+      <div class="field"><span>Music folder</span><span><code>{{ music_dir }}</code> <span class="faint">· mounted read-only</span></span></div>
+      <div class="field"><span>Audio</span><span class="row">{{ check('highlight', 'cut_on_beat', 'Cut on beat', s.highlight.cut_on_beat) }}{{ check('highlight', 'duck_under_speech', 'Lower music when people talk', s.highlight.duck_under_speech) }}</span></div>
+      <div class="field"><span>Title card</span>{{ check('highlight', 'title_card', 'Open with an animated title', s.highlight.title_card) }}</div>
+      {{ select('highlight', 'title_style', 'Title animation', s.highlight.title_style, [('random', 'Random'), ('fade-up', 'Fade up'), ('typewriter', 'Typewriter'), ('letters', 'Letter by letter')]) }}
+    </fieldset>
+  </div>
+
+  <div class="grid2">
+    <fieldset>
+      <legend>Pop-out photo</legend>
+      <p class="faint">Styles made for each pop-out job (and for pop-out suggestions). Each job can pick its own on Create.</p>
+      <div class="field"><span>Styles</span><span class="row">
+        {% for st_ in popout_styles %}{{ check('popout', st_, popout_labels[st_], s.popout[st_]) }}{% endfor %}
+        {{ check('popout', 'splash_video', 'Colour-splash video', s.popout.splash_video) }}
+      </span></div>
+    </fieldset>
+    <fieldset>
+      <legend>Housekeeping</legend>
+      {{ number('housekeeping', 'retention_days', 'Remove finished jobs after', s.housekeeping.retention_days, unit='days') }}
+      <p class="faint">Removes job records, logs and test-mode output older than this, plus old handled suggestions. 0 keeps everything. Creations already in Immich are never touched; presets stay.</p>
+    </fieldset>
+  </div>
+  <div class="row"><button class="btn" type="submit">Save settings</button></div>
+</form>
+
+<fieldset id="presets">
+  <legend>Presets</legend>
+  {% if presets %}
+  <ul class="preset-list">
+    {% for p in presets %}
+    <li>
+      <span><strong>{{ p.name }}</strong> <span class="faint">· {{ kind_labels[p.kind] }} · {{ p.params | tojson }}</span></span>
+      <span class="row">
+        <a class="btn ghost sm" href="/create?preset={{ p.id }}">Use</a>
+        <form method="post" action="/presets/{{ p.id }}/delete"><button class="btn ghost sm danger" type="submit" aria-label="Delete preset {{ p.name }}">Delete</button></form>
+      </span>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="muted">No presets yet. On the Jobs page, use <strong>Save as preset</strong> on a finished job to keep its look (style, caption, animation) for later.</p>
+  {% endif %}
+</fieldset>
+
+<fieldset>
+  <legend>Account</legend>
+  <form method="post" action="/settings/password" class="field">
+    <label for="new_password">New password</label>
+    <div>
+      <span class="row"><input id="new_password" name="new_password" type="password" autocomplete="new-password" minlength="12" required {% if password_message %}aria-invalid="true" aria-describedby="pw-msg"{% endif %}><button class="btn ghost sm" type="submit">Change</button></span>
+      {% if password_message %}<p class="err" id="pw-msg" role="alert">{{ password_message }}</p>{% else %}<p class="faint">At least 12 characters. Changing it signs you out everywhere.</p>{% endif %}
+    </div>
+  </form>
+</fieldset>
+</div>
+{% endblock %}
