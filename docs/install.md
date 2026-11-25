@@ -36,15 +36,13 @@ Everything else (collage styles, pop-out styles, housekeeping, suggestions) is s
 Good if you want to change the code or need the Immich v3.4 client.
 
 ```sh
-git clone https://github.com/harivig12/photos-companion.git
-cd photos-companion
+git clone https://github.com/harivig12/photo-companion.git
+cd photo-companion
 cp .env.example .env          # set IMMICH_URL and IMMICH_API_KEY
 mkdir -p data music           # put your music tracks in ./music
 sudo chown 1000:1000 data     # the container runs as UID 1000
 docker compose up -d --build
 ```
-
-The repository is private, so `git clone` asks for your GitHub login. Use a personal access token with the `repo` scope as the password.
 
 Open `http://<server>:8765`. If `PHOTOS_PASSWORD` was empty:
 
@@ -56,13 +54,9 @@ docker compose logs photos | grep "Generated UI password"
 
 Nothing is built on your server. A GitHub Actions workflow publishes `ghcr.io/harivig12/photos-companion` for `linux/amd64` on every push to `main`, tagged `latest`, the short commit, and `1.2.3` for a `v1.2.3` tag.
 
-The repository is private, so the image is private too. Log in once on the server with a token that has **`read:packages`** (GitHub → Settings → Developer settings → Personal access tokens (classic)):
+The repository is public. If the first push of the image leaves the package private (GitHub's default for new packages), open **Your profile → Packages → photos-companion → Package settings** and set the visibility to Public. Then no login is needed on the server.
 
-```sh
-echo "<token>" | docker login ghcr.io -u harivig12 --password-stdin
-```
-
-Then save [`docker-compose.portainer.yml`](../docker-compose.portainer.yml) and a `.env` file in the same folder:
+Save [`docker-compose.portainer.yml`](../docker-compose.portainer.yml) and a `.env` file in the same folder:
 
 ```sh
 IMMICH_URL=http://192.168.1.10:2283
@@ -75,13 +69,13 @@ MUSIC_DIR=/path/to/music
 docker compose -f docker-compose.portainer.yml up -d
 ```
 
-To make the package pullable without a login, open the repository's **Packages → photos-companion → Package settings** and change its visibility. Only do that if you're fine with the image being public (it contains no keys or photos).
+The image contains no keys or photos, so making it public is safe.
 
 ## C. Portainer
 
 ### C1. Stack from the web editor (prebuilt image)
 
-1. **Registries → Add registry → Custom registry** (only because the image is private):
+1. **Only if the package is still private:** **Registries → Add registry → Custom registry**:
    - Name: `ghcr`, URL: `ghcr.io`
    - Authentication on, username `harivig12`, password = a token with `read:packages`.
 2. **Stacks → Add stack**, name it `photos`, choose **Web editor**, and paste the contents of [`docker-compose.portainer.yml`](../docker-compose.portainer.yml).
@@ -92,8 +86,8 @@ To make the package pullable without a login, open the repository's **Packages �
 ### C2. Stack from the Git repository (builds on the server)
 
 1. **Stacks → Add stack → Repository**.
-2. Repository URL `https://github.com/harivig12/photos-companion`, reference `refs/heads/main`.
-3. Turn on **Authentication**: username `harivig12`, password = a personal access token with the `repo` scope.
+2. Repository URL `https://github.com/harivig12/photo-companion`, reference `refs/heads/main`.
+3. Leave **Authentication** off (the repository is public).
 4. Compose path: `docker-compose.yml`. Add the same environment variables as above. The stack reads `./data` and `./music` next to the compose file, which Portainer places under its own data folder, so for a stable location edit the two volumes in `docker-compose.yml` to absolute paths on your host.
 5. **Deploy the stack.** The first build takes a few minutes.
 
@@ -133,7 +127,7 @@ The UI has a password and a lock-out after repeated failures, but the traffic is
 | "Cannot reach Immich" | `IMMICH_URL` uses `localhost`, or the server isn't on the same Docker network or LAN route |
 | Settings page says the key lacks permissions | Give the key the permissions listed above (edit it in Immich or create a new one), then restart the container |
 | `permission denied` on `/data` | A bind-mounted `./data` isn't owned by UID 1000: `sudo chown 1000:1000 data` |
-| `pull access denied` for `ghcr.io/...` | The registry login is missing or the token lacks `read:packages` |
+| `pull access denied` for `ghcr.io/...` | The package is still private (make it Public, see option B) or the registry login is missing |
 | A response from Immich fails to parse | The client doesn't match your Immich version: see "Before you start", point 3 |
 | Cinematic or pop-out jobs fail on the first run | No internet access for the one-time model download |
 | Highlight videos can't find music | `MUSIC_DIR` is empty or the path is wrong |
